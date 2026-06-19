@@ -19,6 +19,44 @@ An AI-powered full-stack mock interview feedback platform. It records/uploads in
 
 ---
 
+## 🏗️ Architectural Design
+
+The application uses an asynchronous, decoupled microservices architecture to process intensive audio transcriptions without locking client threads.
+
+### System Architecture Flow:
+```mermaid
+graph TD
+    Client[React Frontend <br> Port 3000]
+    API[Spring Boot Backend <br> Port 8080]
+    AI[Flask AI Service <br> Port 5000]
+    DB[(PostgreSQL Database <br> Port 5432)]
+    S3([AWS S3 Storage <br> Optional])
+
+    Client -->|1. POST /api/upload| API
+    API -->|2. Return JobID & Status PENDING| Client
+    Client -.->|3. Poll /api/status/jobId| API
+    
+    subgraph Spring Boot Async Thread Pool
+        API -->|4. Save Job Metadata| DB
+        API -.->|5. Backup Audio File| S3
+        API -->|6. POST /transcribe| AI
+        AI -->|7. local OpenAI Whisper CPU| AI
+        AI -->|8. Return Speech Analytics| API
+        API -->|9. Save Results & Set DONE| DB
+    end
+```
+
+### Data Flow Execution:
+1. **Initiation:** The authenticated user uploads an audio recording on the **React Frontend**.
+2. **Handshake:** The **Spring Boot Backend** generates a unique Job UUID, saves it to PostgreSQL as `PENDING`, spawns an asynchronous execution thread, and immediately returns the Job ID to React to prevent HTTP timeout.
+3. **Polling:** The client starts polling the status endpoint every 2 seconds.
+4. **Execution:** Inside the `@Async` thread pool, Spring Boot backups the file to S3 (if keys are configured) and transfers the file to the **Flask AI Service**.
+5. **Whisper Telemetry:** Flask processes the audio through PyTorch CPU-optimized Whisper model, parses words, computes filler rates, assesses average pauses, and responds with a telemetry payload.
+6. **Persistence:** Spring Boot parses the results, stores them in PostgreSQL `analysis_results` (with JSONB mappings for filler breakdown), and flags the Job status as `DONE`.
+7. **Resolution:** The next poll from the client detects the `DONE` status, retrieves the completed data, and renders the telemetry details and performance charts.
+
+---
+
 ## 🛠️ Tech Stack
 
 * **Frontend:** React.js, Recharts, React Icons, CSS Glassmorphism
