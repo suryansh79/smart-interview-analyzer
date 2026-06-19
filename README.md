@@ -7,7 +7,7 @@ An AI-powered full-stack mock interview feedback platform. It records/uploads in
 ## ✨ Features
 
 * **🛡️ JWT Authentication:** Secure login and registration powered by Spring Security.
-* **🔬 Asynchronous AI Processing:** Non-blocking speech analysis using custom thread pools (`@Async` executor).
+* **🔬 Asynchronous AI Processing:** Non-blocking speech analysis using Spring @Async with dedicated ExecutorService thread pools — returns jobId immediately, processes transcription asynchronously.
 * **🧠 Local OpenAI Whisper Integration:** Flask AI microservice running Whisper "base" model entirely on CPU.
 * **📈 Rich Speech Telemetry:**
   * Accurate speech-to-text transcriptions.
